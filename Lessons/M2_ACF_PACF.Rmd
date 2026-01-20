@@ -3,7 +3,7 @@ title: "Import Data - ACF - PACF"
 author: "Luana Lima"
 output: pdf_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ## Setting R code chunk options
@@ -51,7 +51,7 @@ getwd()
 # my output was "/Users/lmm89/Library/CloudStorage/OneDrive-Personal/Duke_University/15_Spring2025/ENV797_TSA/Github/TSA_Sp25" meaning current directory is my project folder, therefore I only need to use "."
 # if output was "/Users/lmm89/Library/CloudStorage/OneDrive-Personal/Duke_University/15_Spring2025/ENV797_TSA/Github/TSA_Sp25/Lessons" then I would need to use ".."
 
-raw_inflow_data <- read.table(file="./Data/inflowtimeseries.txt",header=FALSE,skip=0)
+raw_inflow_data <- read.table(file="../Data/inflowtimeseries.txt",header=FALSE,skip=0)
 
 #If you want specific columns just trim the table
 raw_inflow_data <- raw_inflow_data[,1:5] #the space before the comma means you want all rows
@@ -78,7 +78,7 @@ my_date <- my(my_date)  #function my from package lubridate
 head(my_date)
 #add that to inflow_data 
 inflow_data <- cbind(my_date,raw_inflow_data[,3:5]) #cbind stands for column bind
-head(inflow_data)
+tail(inflow_data)
 
 ```
 
@@ -88,7 +88,7 @@ A plot of observed values over time is the first thing you do to start understan
 
 ```{r}
 #using package ggplot2
-ggplot()
+ggplot(inflow_data, aes(x=my_date, y=HP1)) + geom_line()
 
 #adding two time series to the same plot
 
@@ -102,8 +102,9 @@ In this course we will also use *autoplot()* which is a ggplot() for time series
 Many of the functions we will use require a time series object. You can transform your data in a time series using the function *ts()*. Only the columns with reservoir inflow data should be transformed, not the ones with month and year. Your ts object is not a data frame, but like I said we will need it as a ts for some function we will explore in future scripts.
 
 ```{r}
-ts_inflow_data <- #####
-ts_inflow_data
+ts_inflow_data <- ts(inflow_data[,2:4], start =c(1931,1), frequency=12) 
+#only works if there is one source of seasonality. annual = 1, daily = 365. If not seasonal, ignore frequency
+ts_inflow_data 
 
 ```
 
@@ -117,7 +118,11 @@ autoplot(ts_inflow_data) +
   xlab("Time") +
   ylab("Inflow") +
   labs(color="Reservoir")
-  
+
+autoplot(ts_inflow_data[,1], series = "HP1") + autolayer(ts_inflow_data[,2], series="HP2") +
+  xlab("Time") +
+  ylab("Inflow") +
+  labs(color="Reservoir")
 ```
 
 
@@ -126,17 +131,24 @@ autoplot(ts_inflow_data) +
 There are multiple ways to get acf and pacf plots in R. The default package "stats" have the functions acf() and pacf(). Another option is with the functions Acf() and Pacf() from package "forecast". Package forecast is not a default package. So you need to install and load it on the beginning of your scripts. 
 
 ```{r acf}
+#you want the lags to decay with time
 # Option 1: The function acf() and pacf() is from package "stats"
-HP1_acf=
+HP1_acf=acf(ts_inflow_data[,1], lag.max = 40, plot=TRUE)
+# blue dashes are the confidence intervals. lags that fall within the blue lines can be considered insignificant
+#ts_inflow_data[,1], lag 1
+#ts_inflow_data[,3], lag 3 (column)
 
-HP1_pacf=
+HP1_pacf=pacf(ts_inflow_data[,1], lag.max = 40, plot=TRUE)
 
 #Option 2: Computing ACF and PACF with package "forecast"
 
 #The next line will output a plot since we have plot=TRUE and also store the acf values in the object
-HP1_acf=
+HP1_acf=Acf(ts_inflow_data[,3], lag.max = 60, plot=TRUE) #from the forecast package
+#omits lag 0
 
-HP1_pacf=
+HP1_pacf=Pacf(ts_inflow_data[,3], lag.max = 40, plot=TRUE)
+
+#influence of lag 1 was so strong that something was positive instead of negative 
   
 ```
 

@@ -23,7 +23,6 @@ Second R code chunk is for loading packages. By setting `message = FALSE`, the c
 ```{r package, message=FALSE}
 library(readxl)
 library(openxlsx)
-
 ```
 
 

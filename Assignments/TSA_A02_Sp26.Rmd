@@ -1,7 +1,7 @@
 ---
 title: "ENV 790.30 - Time Series Analysis for Energy Data | Spring 2025"
 subtitle: "Assignment 2 - Due date 01/27/26"
-author: "Student Name"
+author: "Si Min (Lucy) Loo"
 output: pdf_document
 geometry: margin=2.54cm
 ---
@@ -22,7 +22,11 @@ R packages needed for this assignment:"forecast","tseries", and "dplyr". Install
 
 ```{r}
 #Load/install required package here
-
+library(readxl)
+library(openxlsx)
+library(lubridate)
+library(ggplot2)
+library(forecast)
 ```
 
 
@@ -32,7 +36,13 @@ Consider the data provided in the spreadsheet "Table_10.1_Renewable_Energy_Produ
 
 ```{r}
 #Importing data set
+energy_data <- read_excel(path="../Data/Table_10.1_Renewable_Energy_Production_and_Consumption_by_Source.xlsx",skip = 12, sheet="Monthly Data",col_names=FALSE) 
 
+read_col_names <- read_excel(path="../Data/Table_10.1_Renewable_Energy_Production_and_Consumption_by_Source.xlsx",skip = 10,n_max = 1, sheet="Monthly Data",col_names=FALSE) 
+
+colnames(energy_data) <- read_col_names
+head(energy_data)
+read_col_names
 ```
 
 
@@ -40,7 +50,14 @@ Consider the data provided in the spreadsheet "Table_10.1_Renewable_Energy_Produ
 You will work only with the following columns: Total Biomass Energy Production, Total Renewable Energy Production, Hydroelectric Power Consumption. Create a data frame structure with these three time series only. Use the command head() to verify your data.
 
 ```{r}
+df <- data.frame(
+  Month = energy_data$`Month`,
+  Biomass = energy_data$`Total Biomass Energy Production`,
+  Renewable = energy_data$`Total Renewable Energy Production`,
+  Hydroelectric = energy_data$`Hydroelectric Power Consumption`
+)
 
+head(df)
 ```
 
 
@@ -48,7 +65,8 @@ You will work only with the following columns: Total Biomass Energy Production, 
 Transform your data frame in a time series object and specify the starting point and frequency of the time series using the function ts().
 
 ```{r}
-
+ts_df <- ts(df[,2:4], start=c(1973,1), frequency = 12)
+head(ts_df)
 ```
 
 
@@ -56,7 +74,15 @@ Transform your data frame in a time series object and specify the starting point
 Compute mean and standard deviation for these three series.
 
 ```{r}
+# Means
+mean_biomass <- mean(ts_df[, "Biomass"], na.rm = TRUE)
+mean_renew   <- mean(ts_df[, "Renewable"], na.rm = TRUE)
+mean_hydro   <- mean(ts_df[, "Hydroelectric"], na.rm = TRUE)
 
+# Standard deviations
+sd_biomass <- sd(ts_df[, "Biomass"], na.rm = TRUE)
+sd_renew   <- sd(ts_df[, "Renewable"], na.rm = TRUE)
+sd_hydro   <- sd(ts_df[, "Hydroelectric"], na.rm = TRUE)
 ```
 
 
@@ -64,7 +90,26 @@ Compute mean and standard deviation for these three series.
 Display and interpret the time series plot for each of these variables. Try to make your plot as informative as possible by writing titles, labels, etc. For each plot add a horizontal line at the mean of each series in a different color.
 
 ```{r}
+# Biomass
+plot(ts_df[, "Biomass"],
+     main = "Total Biomass Energy Production",
+     ylab = "Energy",
+     xlab = "Time")
+abline(h = mean_biomass, col = "red", lwd = 2)
 
+# Renewable
+plot(ts_df[, "Renewable"],
+     main = "Total Renewable Energy Production",
+     ylab = "Energy",
+     xlab = "Time")
+abline(h = mean_renew, col = "blue", lwd = 2)
+
+# Hydroelectric
+plot(ts_df[, "Hydroelectric"],
+     main = "Hydroelectric Power Consumption",
+     ylab = "Energy",
+     xlab = "Time")
+abline(h = mean_hydro, col = "darkgreen", lwd = 2)
 ```
 
 
@@ -72,23 +117,36 @@ Display and interpret the time series plot for each of these variables. Try to m
 Compute the correlation between these three series. Are they significantly correlated? Explain your answer.
 
 ```{r}
-
+cor(ts_df)
 ```
-
+Biomass and Renewable are significantly positively correlated with each other. This is expected since biomass is a major component of total renewable energy. The correlations involving hydroelectric power consumption are relatively weak, suggesting that hydroelectric generation follows different drivers such as weather patterns and reservoir conditions rather than long-term renewable expansion trends.
 
 ## Question 6
 Compute the autocorrelation function from lag 1 up to lag 40 for these three variables. What can you say about these plots? Do the three of them have the same behavior?
 
 ```{r}
-
+Acf(ts_df[, "Biomass"], lag.max = 40, main = "ACF: Biomass Energy Production")
+Acf(ts_df[, "Renewable"], lag.max = 40, main = "ACF: Total Renewable Energy Production")
+Acf(ts_df[, "Hydroelectric"], lag.max = 40, main = "ACF: Hydroelectric Power Consumption")
 ```
+Biomass and Total Renewable Energy Production show very slow decay in the ACF, with significant autocorrelations persisting even at high lags. This suggests strong trend components and likely non-stationarity, meaning that current biomass levels are very dependent on past values.
 
+Hydroelectric power consumption also shows autocorrelation, but with a more pronounced seasonal pattern at around 12, 24 and 36 months and alternating positive and negative correlations at intermediate lags.
+
+The three series do not have identical behavior: biomass and renewables are dominated by long-term growth trends, while hydroelectric consumption is more strongly influenced by seasonal dynamics.
 
 ## Question 7
 Compute the partial autocorrelation function from lag 1 to lag 40 for these three variables. How these plots differ from the ones in Q6?
 
 ```{r}
-
+Pacf(ts_df[, "Biomass"], lag.max = 40, main = "PACF: Biomass Energy Production")
+Pacf(ts_df[, "Renewable"], lag.max = 40, main = "PACF: Total Renewable Energy Production")
+Pacf(ts_df[, "Hydroelectric"], lag.max = 40, main = "PACF: Hydroelectric Power Consumption")
 ```
+The PACF for biomass shows a very large and significant spike at lag 1, followed by mostly insignificant partial autocorrelations at higher lags (with a few isolated exceptions). This pattern suggests that, once the immediate past value is accounted for, additional lags contribute little explanatory power. 
+The PACF for total renewable energy production closely mirrors that of biomass. For both biomass and total renewable energy production, the ACF shows very high autocorrelation across all lags with slow decay, indicating strong persistence and non-stationarity. In contrast, the PACF shows a dominant spike at lag 1, with most higher-order lags becoming insignificant.
+
+The hydroelectric power consumption shows multiple significant spikes, particularly around seasonal lags.This indicates that hydroelectric consumption depends not only on the immediate past but also on seasonal cycles.
+The ACF exhibits an oscillating, repeating pattern, with significant spikes at seasonal lags (12, 24, 36), indicating strong annual seasonality, and the PACF does not cut off cleanly, instead showing multiple significant spikes at both short and seasonal lags.This contrast suggests that hydroelectric consumption depends on both recent past values and seasonal cycles.
 
 
