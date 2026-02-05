@@ -1,5 +1,5 @@
 ---
-title: "ENV 790.30 - Time Series Analysis for Energy Data | Spring 2025"
+title: "ENV 790.30 - Time Series Analysis for Energy Data | Spring 2026"
 subtitle: "Assignment 2 - Due date 01/27/26"
 author: "Student Name"
 output: pdf_document
