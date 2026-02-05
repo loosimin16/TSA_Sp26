@@ -111,7 +111,7 @@ plot_grid(p1_hydro, p2_hydro, p3_hydro,
 
 From the plot in Q1, do the series Total Renewable Energy Production and Hydroelectric Power Consumption appear to have a trend? If yes, what kind of trend?
 
-Total Renewable Energy seems to display an increasing trend over time. This is confirmed by the ACF, which remains very high and decays slowly across many lags rather than cutting off quickly. The PACF shows a very large and significant spike at lag 1, followed by mostly insignificant values at higher lags.
+Total Renewable Energy seems to display an increasing trend over time. This is confirmed by the ACF, which remains very high and decays slowly across many lags rather than cutting off quickly. The PACF shows a very large and significant spike at lag 1, followed by some but mostly insignificant values at higher lags.
 
 Meanwhile, hydroelectric power consumption fluctuates around a relatively stable mean with no obvious long-term trend. The ACF displays a clear seasonal pattern. The PACF also shows a dominant spike at lag 1 and additional significant seasonal effects around lag 12, followed by rapid decay
 
@@ -123,21 +123,29 @@ Use the *lm()* function to fit a linear trend to the two time series. Ask R to p
 ```{r}
 lm_renew <- lm(formula = Renewable ~ Month, data = df)
 summary(lm_renew)
-coef_renew <- coef(lm_renew)
-coef_renew
+
+beta0_renew <- as.numeric(lm_renew$coefficients[1]) #intercept
+beta1_renew <- as.numeric(lm_renew$coefficients[2]) #slope
+
+beta0_renew
+beta1_renew
 ```
 The slope coefficient represents the average monthly increase in renewable energy production and is positive and statistically significant at 2.85 × 10^-7. The high statistical significance of the slope confirms the strong upward trend observed in the time series plot. The intercept (≈ 145.22) corresponds to the estimated production level at the beginning of the sample period (when the time index equals 1). The model fits the data very well, with an R² of approximately 0.82, meaning that over 80% of the variation in renewable energy production is explained by the linear time trend alone.
 
 ```{r}
 lm_hydro <- lm(Hydroelectric ~ Month, data = df)
 summary(lm_hydro)
-coef_hydro <- coef(lm_hydro)
-coef_hydro
+
+beta0_hydro<- as.numeric(lm_hydro$coefficients[1]) #intercept
+beta1_hydro <- as.numeric(lm_hydro$coefficients[2]) #slope
+
+beta0_hydro
+beta1_hydro
 ```
 
 The estimated regression shows a statistically significant but small negative trend over time. The slope on Month is −4.64 × 10^-9 and is statistically significant at the 1% level (p ≈ 6.5 × 10^-5), indicating a very slight decline in hydroelectric consumption over the sample period.
 The intercept (≈ 83.65) represents the estimated average hydroelectric power consumption at the beginning of the sample period.
-Despite the statistical significance of the slope, the model explains very little of the overall variation in the data (R² ≈ 0.025).
+Despite the statistical significance of the slope, the model explains very little of the overall variation in the data (R² ≈ 0.023).
 
 ### Q4
 
@@ -145,65 +153,58 @@ Use the regression coefficients to detrend each series (subtract fitted linear t
 
 
 ```{r}
-trend_hydro <- fitted(lm(Hydroelectric ~ Month, data = df))
-trend_renew <- fitted(lm(Renewable ~ Month, data = df))
+nobs <- nrow(df)
+t <- 1:nobs
 
-df$Hydro_detrended <- df$Hydroelectric - trend_hydro
-df$Renew_detrended <- df$Renewable - trend_renew
+lm_renew <- lm(Renewable ~ t, data = df)
+beta0_renew <- coef(lm_renew)[1]
+beta1_renew <- coef(lm_renew)[2]
 
-hydro_det_ts <- ts(df$Hydro_detrended,
-                   frequency = 12,
-                   start = c(start_year, start_month))
-renew_det_ts <- ts(df$Renew_detrended,
-                   frequency = 12,
-                   start = c(start_year, start_month))
+renew_detrend <- df$Renewable - (beta0_renew + beta1_renew * t)
+renew_det_ts <- ts(renew_detrend, frequency = 12, start = c(start_year, start_month))
 
-plot(hydro_ts,
-     main = "Hydroelectric Power (Original)",
-     ylab = "Energy Units", xlab = "Time")
+autoplot(renew_ts) +
+  autolayer(renew_det_ts, series = "Detrended") +
+  labs(title = "Renewable: Original vs Detrended",
+       x = "Time", y = "Units")
 
-plot(hydro_det_ts,
-     main = "Hydroelectric Power (Detrended)",
-     ylab = "Detrended Units", xlab = "Time")
+lm_hydro <- lm(Hydroelectric ~ t, data = df)
+beta0_hydro <- coef(lm_hydro)[1]
+beta1_hydro <- coef(lm_hydro)[2]
 
-plot(renew_ts,
-     main = "Total Renewable Energy (Original)",
-     ylab = "Energy Units", xlab = "Time")
+hydro_detrend <- df$Hydroelectric - (beta0_hydro + beta1_hydro * t)
+hydro_det_ts <- ts(hydro_detrend, frequency = 12, start = c(start_year, start_month))
 
-plot(renew_det_ts,
-     main = "Total Renewable Energy (Detrended)",
-     ylab = "Detrended Units", xlab = "Time")
-
+autoplot(hydro_ts) +
+  autolayer(hydro_det_ts, series = "Detrended") +
+  labs(title = "Hydroelectric: Original vs Detrended",
+       x = "Time", y = "Units")
 ```
 The original renewable energy series exhibits a strong upward trend over time, with production levels increasing substantially across the sample period. After detrending, this long-run growth is removed, and the series now fluctuates around a zero mean. The detrended series highlights medium- and short-term deviations from the linear trend, including periods of below-trend production in the late 1990s and early 2000s and above-trend production in more recent years.
 
-For hydroelectric power consumption, the original series already fluctuates around a relatively stable level with no clear long-term trend. After detrending, the series appears almost unchanged aside from a slight recentering around zero.
+For hydroelectric power consumption, the original series already fluctuates around a relatively stable level with no clear long-term trend. After detrending, the series appears almost unchanged aside from a recentering around zero.
 
 ### Q5
 
 Plot ACF and PACF for the detrended series and compare with the plots from Q1. You may use plot_grid() again to get them side by side to make it easier to compare. Did the plots change? How?
 
 ```{r}
-acf_renew_det <- autoplot(Acf(renew_det_ts, lag.max = 60, plot = FALSE)) +
-  labs(title = "Renewable (Detrended) - ACF",
-       x = "Lag", y = "ACF")
 
-pacf_renew_det <- autoplot(Pacf(renew_det_ts, lag.max = 60, plot = FALSE)) +
-  labs(title = "Renewable (Detrended) - PACF",
-       x = "Lag", y = "PACF")
+acf_renew_orig <- autoplot(Acf(renew_ts, lag.max = 40, plot = FALSE)) +
+  labs(title = "Renewable (Original) - ACF", x = "Lag", y = "ACF")
 
-plot_grid(acf_renew_det, pacf_renew_det, nrow = 1)
+acf_renew_det <- autoplot(Acf(renew_det_ts, lag.max = 40, plot = FALSE)) +
+  labs(title = "Renewable (Detrended) - ACF", x = "Lag", y = "ACF")
 
+acf_hydro_orig <- autoplot(Acf(hydro_ts, lag.max = 40, plot = FALSE)) +
+  labs(title = "Hydro (Original) - ACF", x = "Lag", y = "ACF")
 
-acf_hydro_det <- autoplot(Acf(hydro_det_ts, lag.max = 60, plot = FALSE)) +
-  labs(title = "Hydroelectric (Detrended) - ACF",
-       x = "Lag", y = "ACF")
+acf_hydro_det <- autoplot(Acf(hydro_det_ts, lag.max = 40, plot = FALSE)) +
+  labs(title = "Hydro (Detrended) - ACF", x = "Lag", y = "ACF")
 
-pacf_hydro_det <- autoplot(Pacf(hydro_det_ts, lag.max = 60, plot = FALSE)) +
-  labs(title = "Hydroelectric (Detrended) - PACF",
-       x = "Lag", y = "PACF")
-
-plot_grid(acf_hydro_det, pacf_hydro_det, nrow = 1)
+plot_grid(acf_renew_orig, acf_renew_det,
+          acf_hydro_orig, acf_hydro_det,
+          nrow = 2, align = "v")
 ```
 Compared to Q1, the detrended renewable series shows some change but not a complete transformation. The ACF of the detrended series still remains very high and decays slowly across many lags, indicating that strong persistence remains even after detrending. The PACF continues to show a very strong spike at lag 1, with several additional significant spikes at short and seasonal lags. 
 
@@ -225,61 +226,70 @@ Use function *lm()* to fit a seasonal means model (i.e. using the seasonal dummi
 
 
 ```{r}
-df$MonthFactor <- factor(format(df$Month, "%m"),
-                         levels = sprintf("%02d", 1:12),
-                         labels = month.abb)
+# Seasonal dummies (11 columns; one month is baseline via intercept)
+# renew_ts <- ts(df$Renewable, frequency=12, start=c(start_year, start_month))
+# hydro_ts <- ts(df$Hydroelectric, frequency=12, start=c(start_year, start_month))
+
+
+dummies_renew <- seasonaldummy(renew_ts)
+dummies_hydro <- seasonaldummy(hydro_ts)
 
 # Seasonal means models
-lm_renew_seasonal <- lm(Renewable ~ MonthFactor, data = df)
-lm_hydro_seasonal <- lm(Hydroelectric ~ MonthFactor, data = df)
+seas_model_renew <- lm(as.numeric(renew_ts) ~ dummies_renew)
+seas_model_hydro <- lm(as.numeric(hydro_ts) ~ dummies_hydro)
 
 # Print summaries
-summary(lm_renew_seasonal)
-summary(lm_hydro_seasonal)
+summary(seas_model_renew)
+summary(seas_model_hydro)
 ```
-The seasonal means regression for total renewable energy production shows that none of the monthly dummy variables are statistically significant at conventional levels. The overall model fit is extremely weak, with an R² of approximately 0.008. This indicates that average renewable energy production does not differ systematically across months. In other words, there is no evidence of a meaningful seasonal pattern in renewable energy production once month-to-month variation is accounted for.
+The seasonal means regression for total renewable energy production shows that none of the monthly dummy variables are statistically significant at conventional levels. The overall model fit is extremely weak, with an R² of approximately -0.009324 This indicates that average renewable energy production does not differ systematically across months. In other words, there is no evidence of a meaningful seasonal pattern in renewable energy production once month-to-month variation is accounted for.
 
-In contrast, the seasonal means regression for hydroelectric power consumption reveals strong and statistically significant seasonal effects. Many monthly dummy coefficients are significant at the 1% or 0.1% level, with sizable magnitudes. For example, hydroelectric consumption is significantly higher in late spring and early summer (e.g., May and June) and significantly lower in late summer and fall (e.g., August through November) relative to the reference month. The model explains a substantial portion of the variation in the data, with an R² of approximately 0.47
+In contrast, the seasonal means regression for hydroelectric power consumption reveals strong and statistically significant seasonal effects. Many monthly dummy coefficients are significant at the 1% or 0.1% level, with sizable magnitudes. For example, hydroelectric consumption is significantly higher in late spring and early summer (e.g., May and June) and significantly lower in late summer and fall (e.g., August through November) relative to the reference month. The model explains a substantial portion of the variation in the data, with an R² of approximately 0.46.
 
 ### Q8
 
 Use the regression coefficients from Q7 to deseason the series. Plot the deseason series and compare with the plots from part Q1. Did anything change?
 
 ```{r}
-season_renew <- fitted(lm_renew_seasonal)
-season_hydro <- fitted(lm_hydro_seasonal)
+nobs_renew <- length(renew_ts)
 
-df$Renewable_deseason <- df$Renewable - season_renew
-df$Hydro_deseason <- df$Hydroelectric - season_hydro
+beta_int_renew <- seas_model_renew$coefficients[1]
+beta_coeff_renew <- seas_model_renew$coefficients[2:12]
 
-renew_deseason_ts <- ts(df$Renewable_deseason,
-                        frequency = 12,
-                        start = c(start_year, start_month))
+season_renew <- array(0, nobs_renew)
+for (i in 1:nobs_renew) {
+  season_renew[i] <- beta_int_renew + sum(beta_coeff_renew * dummies_renew[i, ])
+}
 
-hydro_deseason_ts <- ts(df$Hydro_deseason,
-                        frequency = 12,
-                        start = c(start_year, start_month))
+deseason_renew <- as.numeric(renew_ts) - season_renew
+renew_deseason_ts <- ts(deseason_renew,
+                        start = c(start_year, start_month),
+                        frequency = 12)
 
+autoplot(renew_ts) +
+  autolayer(renew_deseason_ts, series = "Deseasonalized") +
+  labs(title = "Renewable: Original vs Deseasonalized",
+       x = "Time", y = "Units")
 
-par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
+nobs_hydro <- length(hydro_ts)
 
-plot(renew_ts,
-     main = "Renewable Energy (Original)",
-     ylab = "Energy Units", xlab = "Time")
+beta_int_hydro <- seas_model_hydro$coefficients[1]
+beta_coeff_hydro <- seas_model_hydro$coefficients[2:12]
 
-plot(renew_deseason_ts,
-     main = "Renewable Energy (Deseasonalized)",
-     ylab = "Deseasonalized Units", xlab = "Time")
+season_hydro <- array(0, nobs_hydro)
+for (i in 1:nobs_hydro) {
+  season_hydro[i] <- beta_int_hydro + sum(beta_coeff_hydro * dummies_hydro[i, ])
+}
 
-plot(hydro_ts,
-     main = "Hydroelectric Power (Original)",
-     ylab = "Energy Units", xlab = "Time")
+deseason_hydro <- as.numeric(hydro_ts) - season_hydro
+hydro_deseason_ts <- ts(deseason_hydro,
+                        start = c(start_year, start_month),
+                        frequency = 12)
 
-plot(hydro_deseason_ts,
-     main = "Hydroelectric Power (Deseasonalized)",
-     ylab = "Deseasonalized Units", xlab = "Time")
-
-par(mfrow = c(1, 1))
+autoplot(hydro_ts) +
+  autolayer(hydro_deseason_ts, series = "Deseasonalized") +
+  labs(title = "Hydroelectric: Original vs Deseasonalized",
+       x = "Time", y = "Units")
 
 ```
 
@@ -293,27 +303,38 @@ Plot ACF and PACF for the deseason series and compare with the plots from Q1. Yo
 
 
 ```{r}
+# --- Renewable: Original vs Deseasoned ACF/PACF ---
+acf_renew_orig <- autoplot(Acf(renew_ts, lag.max = 60, plot = FALSE)) +
+  labs(title = "Renewable (Original) - ACF", x = "Lag", y = "ACF")
+pacf_renew_orig <- autoplot(Pacf(renew_ts, lag.max = 60, plot = FALSE)) +
+  labs(title = "Renewable (Original) - PACF", x = "Lag", y = "PACF")
+
 acf_renew_des <- autoplot(Acf(renew_deseason_ts, lag.max = 60, plot = FALSE)) +
-  labs(title = "Renewable (Deseasonalized) - ACF",
-       x = "Lag", y = "ACF")
-
+  labs(title = "Renewable (Deseasoned) - ACF", x = "Lag", y = "ACF")
 pacf_renew_des <- autoplot(Pacf(renew_deseason_ts, lag.max = 60, plot = FALSE)) +
-  labs(title = "Renewable (Deseasonalized) - PACF",
-       x = "Lag", y = "PACF")
+  labs(title = "Renewable (Deseasoned) - PACF", x = "Lag", y = "PACF")
 
-plot_grid(acf_renew_des, pacf_renew_des, nrow = 1)
+plot_grid(acf_renew_orig, pacf_renew_orig,
+          acf_renew_des, pacf_renew_des,
+          nrow = 2)
+
+
+# --- Hydroelectric: Original vs Deseasoned ACF/PACF ---
+acf_hydro_orig <- autoplot(Acf(hydro_ts, lag.max = 60, plot = FALSE)) +
+  labs(title = "Hydro (Original) - ACF", x = "Lag", y = "ACF")
+pacf_hydro_orig <- autoplot(Pacf(hydro_ts, lag.max = 60, plot = FALSE)) +
+  labs(title = "Hydro (Original) - PACF", x = "Lag", y = "PACF")
 
 acf_hydro_des <- autoplot(Acf(hydro_deseason_ts, lag.max = 60, plot = FALSE)) +
-  labs(title = "Hydroelectric (Deseasonalized) - ACF",
-       x = "Lag", y = "ACF")
-
+  labs(title = "Hydro (Deseasoned) - ACF", x = "Lag", y = "ACF")
 pacf_hydro_des <- autoplot(Pacf(hydro_deseason_ts, lag.max = 60, plot = FALSE)) +
-  labs(title = "Hydroelectric (Deseasonalized) - PACF",
-       x = "Lag", y = "PACF")
+  labs(title = "Hydro (Deseasoned) - PACF", x = "Lag", y = "PACF")
 
-plot_grid(acf_hydro_des, pacf_hydro_des, nrow = 1)
+plot_grid(acf_hydro_orig, pacf_hydro_orig,
+          acf_hydro_des, pacf_hydro_des,
+          nrow = 2)
 ```
 
-Comparing the deseasonalized ACF and PACF with those from Q1, there is essentially no change in the correlation structure. The ACF remains very high at short lags and decays slowly across many lags, indicating strong persistence and non-stationarity. The PACF continues to show a dominant spike at lag 1, with most higher lags being insignificant.
+Comparing the deseasonalized ACF and PACF with those from Q1, there is essentially no change in the correlation structure. The ACF remains very high at short lags and decays slowly across many lags, indicating strong persistence and non-stationarity. The PACF continues to show a dominant spike at lag 1, but the higher lags are comparatively more insignificant. 
 
 In contrast, the deseasonalized hydroelectric series shows a substantial change relative to Q1. In the original series, the ACF exhibited strong seasonal spikes at lags 12, 24, and their multiples. After deseasonalization, these seasonal spikes are largely removed. Similarly, the PACF no longer shows pronounced seasonal effects and is dominated by a strong spike at lag 1, followed by mostly insignificant higher-order lags.

@@ -22,7 +22,6 @@ library(ggplot2)
 library(forecast)
 library(Kendall)
 library(tseries)
-
 ```
 
 ## Importing data
@@ -138,7 +137,7 @@ Let's identify and remove trend component. You start by fitting a linear model t
 t <- c(1:nobs)
 
 # Choose one HP
-iHP <- 4
+iHP <- 3
 
 #Fit a linear trend to TS of iHP
 linear_trend_model <- lm(inflow_data[,iHP+1]~t)
@@ -152,6 +151,8 @@ beta1 <- as.numeric(linear_trend_model$coefficients[2]) #slope
 ggplot(inflow_data, aes(x=my_date, y=inflow_data[,iHP+1])) +
   geom_line(color="blue") +
   geom_smooth(method = "lm", color = "red")
+
+beta1
 ```
 Not a significant regression for HP15.
 Significant regression for HP4.
@@ -211,6 +212,7 @@ ts_deseason_inflow_data <- ts(deseason_inflow_data,
 #plots
 autoplot(ts_inflow_data[,iHP]) +
   autolayer(ts_deseason_inflow_data, series = "Detrend and Deseasoned Inflow")
+summary(seas_means_model)
 
 ```
 

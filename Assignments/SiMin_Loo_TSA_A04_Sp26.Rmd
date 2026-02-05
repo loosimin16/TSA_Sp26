@@ -1,11 +1,11 @@
 ---
 title: "ENV 797 - Time Series Analysis for Energy and Environment Applications | Spring 2026"
 subtitle: "Assignment 4 - Due date 02/10/26"
-author: "Student Name"
+author: "Loo Si Min"
 output: pdf_document
 geometry: margin=2.54cm
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
   
 ## Directions
@@ -22,7 +22,11 @@ R packages needed for this assignment: "xlsx" or "readxl", "ggplot2", "forecast"
 
 ```{r message=FALSE, warning=FALSE}
 #Load/install required package here
-
+library(forecast)
+library(tseries)
+library(Kendall)
+library(readxl)
+library(ggplot2)
 ```
 
 ## Questions 
@@ -31,8 +35,18 @@ Consider the same data you used for A3 from the spreadsheet "Table_10.1_Renewabl
 
 ```{r message=FALSE, warning=FALSE}
 #Importing data set - you may copy your code from A3
+energy_data <- read_excel(path="../Data/Table_10.1_Renewable_Energy_Production_and_Consumption_by_Source.xlsx",skip = 12, sheet="Monthly Data",col_names=FALSE) 
 
+read_col_names <- read_excel(path="../Data/Table_10.1_Renewable_Energy_Production_and_Consumption_by_Source.xlsx",skip = 10,n_max = 1, sheet="Monthly Data",col_names=FALSE) 
 
+colnames(energy_data) <- read_col_names
+
+df <- data.frame(
+  Month = energy_data$`Month`,
+  Renewable = energy_data$`Total Renewable Energy Production`
+)
+
+head(df)
 ```
 
 
@@ -51,6 +65,7 @@ Try differencing at lag 1 only once, i.e., make `lag=1` and `differences=1`. Plo
 
 ```{r}
 
+
 ```
 
 
@@ -58,6 +73,7 @@ Try differencing at lag 1 only once, i.e., make `lag=1` and `differences=1`. Plo
 Copy and paste part of your code for A3 where you run the regression for Total Renewable Energy Production and subtract that from the original series. This should be the code for Q3 and Q4. make sure you use assign same name for the time series object that you had in A3, otherwise the code will not work.
 
 ```{r}
+
 
 ```
 
@@ -70,6 +86,7 @@ What can you tell from this plot? Which method seems to have been more efficient
 
 ```{r}
 
+
 ```
 
 > Answer: 
@@ -78,6 +95,7 @@ What can you tell from this plot? Which method seems to have been more efficient
 Plot the ACF for the three series and compare the plots. Add the argument `ylim=c(-0.5,1)` to the autoplot() or Acf() function - whichever you are using to generate the plots - to make sure all three y axis have the same limits. Looking at the ACF which method do you think was more efficient in eliminating the trend? The linear regression or differencing?
 
 ```{r}
+
 
 ```
 
@@ -88,6 +106,7 @@ Compute the Seasonal Mann-Kendall and ADF Test for the original "Total Renewable
 
 ```{r}
 
+
 ```
 
 > Answer: 
@@ -97,12 +116,14 @@ Aggregate the original "Total Renewable Energy Production" series by year. You c
 
 ```{r}
 
+
 ```
 
 ### Q7
 Apply the Mann Kendall, Spearman correlation rank test and ADF. Are the results from the test in agreement with the test results for the monthly series, i.e., results for Q5?
 
 ```{r}
+
 
 ```
 
