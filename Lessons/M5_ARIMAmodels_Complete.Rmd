@@ -3,7 +3,7 @@ title: "M5: ARIMA Models in R"
 author: "Luana Lima"
 output: pdf_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ## Setting R code chunk options
@@ -40,7 +40,7 @@ For this module we will work with monthly average for electricity retail price i
 ```{r}
 
 #Importing time series data from text file#
-electricity_price <- read.csv(file="./Data/Average_retail_price_of_electricity_United_States_monthly.csv",header=TRUE,skip=4)
+electricity_price <- read.csv(file="../Data/Average_retail_price_of_electricity_United_States_monthly.csv",header=TRUE,skip=4)
 
 #Inspect data
 head(electricity_price)
@@ -317,7 +317,8 @@ Now that you have played with different order, let's try the auto.arima() functi
 
 ```{r}
 
-Model_autofit <- auto.arima(deseasonal_residential_price,max.D=0,max.P = 0,max.Q=0,approximation = TRUE)
+Model_autofit <- auto.arima(deseasonal_residential_price,max.D=0,max.P = 0,max.Q=0,approximation = TRUE) #right now is just telling the model dont worry about seasonality
+
 print(Model_autofit)
 compare_aic <- cbind(compare_aic,Model_autofit$aic)
 
@@ -335,10 +336,9 @@ print(compare_aic)
 If you don't differenciate the series, i.e., if you input the non-stationarity series, you should specify d = 1. Otherwise, Arima will be fitting a model to a non-stationary series. Note the difference between AIC for Model_101 and Model_101_diff
 
 ```{r}
-
-#Model_101 <- Arima(deseasonal_residential_price,order=c(1,0,1))
-#print(Model_101)
-#compare_aic <- data.frame(compare_aic,Model_101$aic)
+Model_101 <- Arima(deseasonal_residential_price,order=c(1,0,1))
+print(Model_101)
+compare_aic <- data.frame(compare_aic,Model_101$aic)
 
 Model_101_diff=Arima(deseasonal_residential_price_diff,order=c(1,0,1))
 print(Model_101_diff)
@@ -377,6 +377,8 @@ cowplot::plot_grid(Plot1,Plot2,Plot3,Plot4,nrow=2)
 
 
 ```
+
+When you move from 1,1,1 to 2,1,1 its very similar. The coefficients compensate for each other. 
 
 Note that this is still non-seasonal data. If you want to compare to the original series with seasonality, you need to add seasonal component back to the ARIMA fit.
 

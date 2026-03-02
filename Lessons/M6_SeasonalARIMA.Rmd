@@ -3,7 +3,7 @@ title: "M6: Seasonal ARIMA Models in R"
 author: "Luana Lima"
 output: pdf_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ## Setting R code chunk options
@@ -36,7 +36,7 @@ For this module we will work with monthly average for electricity retail price i
 ```{r}
 
 #Importing time series data from text file#
-electricity_price <- read.csv(file="./Data/Average_retail_price_of_electricity_United_States_monthly.csv",header=TRUE,skip=4)
+electricity_price <- read.csv(file="../Data/Average_retail_price_of_electricity_United_States_monthly.csv",header=TRUE,skip=4)
 
 #Inspect data
 head(electricity_price)
@@ -217,13 +217,32 @@ plot_grid(
 
 ```
 
+The seasonal part is slowly decaying, it is ...
+
 Look at the twice differenced series to identify model order. 
 
 
 ## Manually fitting seasonal ARIMA to original series
 
 ```{r}
+y <- ts_electricity_price[,"Residential"]
 
+# A few common starting candidates after (d=1, D=1, s=12)
+fit_011_011 <- Arima(y, order=c(0,1,1), seasonal=c(0,1,1), include.drift=FALSE)
+fit_111_011 <- Arima(y, order=c(1,1,1), seasonal=c(0,1,1), include.drift=FALSE)
+fit_012_011 <- Arima(y, order=c(0,1,2), seasonal=c(0,1,1), include.drift=FALSE)
+fit_112_011 <- Arima(y, order=c(1,1,2), seasonal=c(0,1,1), include.drift=FALSE)
+fit_011_111 <- Arima(y, order=c(0,1,1), seasonal=c(1,1,1), include.drift=FALSE)
+
+# Compare models
+AIC(fit_011_011, fit_111_011, fit_012_011, fit_112_011, fit_011_111)
+
+# Choose the best-looking one (lowest AICc), then diagnose residuals
+checkresiduals(fit_112_011)  # <- change this to your selected "best" fit
+
+# Forecast from the chosen model
+fc_manual <- forecast(fit_112_011, h=24)
+autoplot(fc_manual) + ggtitle("Manual SARIMA Forecast (h=24)")
 
 
 ```
@@ -232,7 +251,20 @@ Look at the twice differenced series to identify model order.
 
 ```{r}
 
+y <- ts_electricity_price[,"Residential"]
 
+fit_auto_sarima <- auto.arima(
+  y,
+  seasonal = TRUE,
+  stepwise = FALSE,
+  approximation = FALSE
+)
+
+fit_auto_sarima
+checkresiduals(fit_auto_sarima)
+
+fc_auto_sarima <- forecast(fit_auto_sarima, h=24)
+autoplot(fc_auto_sarima) + ggtitle("Auto SARIMA Forecast (h=24)")
 
 
 ```
@@ -243,7 +275,20 @@ Look at the twice differenced series to identify model order.
 Recall from M6 that the best fit for the non-seasonal time series is a ARIMA(1,1,2) with drift.
 
 ```{r}
+x <- deseasonal_residential_price
 
+fit_auto_arima_deseason <- auto.arima(
+  x,
+  seasonal = FALSE,
+  stepwise = FALSE,
+  approximation = FALSE
+)
+
+fit_auto_arima_deseason
+checkresiduals(fit_auto_arima_deseason)
+
+fc_deseason <- forecast(fit_auto_arima_deseason, h=24)
+autoplot(fc_deseason) + ggtitle("Auto ARIMA on Deseasonalized Series (h=24)")
 
 
 ```
